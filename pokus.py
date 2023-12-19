@@ -1,23 +1,7 @@
-import whisper
+import os
+import json
 
-# print(whisper.available_models())
+text_file_name = 'large_P_Hanes_Apologetika_03 Apologetika(VnC).txt'
 
-model = whisper.load_model("base")
-
-# load audio and pad/trim it to fit 30 seconds
-audio = whisper.load_audio("../../01AkocitatMojzisa.mp3'")
-audio = whisper.pad_or_trim(audio)
-
-# make log-Mel spectrogram and move to the same device as the model
-mel = whisper.log_mel_spectrogram(audio).to(model.device)
-
-# detect the spoken language
-_, probs = model.detect_language(mel)
-print(f"Detected language: {max(probs, key=probs.get)}")
-
-# decode the audio
-options = whisper.DecodingOptions()
-result = whisper.decode(model, mel, options)
-
-# print the recognized text
-print(result.text)
+with open(os.path.join('./text', text_file_name), 'r') as f:
+    print(json.load(f))

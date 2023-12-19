@@ -1,24 +1,29 @@
 import whisper
 import time
-import logging
-
-# https://audio.samsely.sk/P_Hanes/Duch%20Svaty/01%20Tajomna%20osoba%20Ducha%20Svateho.mp3
+import json
 
 start_time = time.time()
 
-model = "tiny"
+model = "large"
 
-file = "./audio/19.mp3"
+file = "./audio/barkoci.m4a"
 
-text = whisper.transcribe(
+transcribed = whisper.transcribe(
     audio=file,
     model=model,
-    )['text']
+    verbose=True,
+    )
 
 end_time = time.time()
 total_time = end_time - start_time
 print("Total processing time:", total_time, "seconds")
 
-# save text to file
-with open(file.split('/'), 'w') as f:
-    f.write(text)
+# save json to file
+output_file = "./json/" + file.split('.')[0] + ".json"
+
+# Remove tokens before saving
+for segment in transcribed["segments"]:
+    del segment["tokens"]
+
+with open(output_file, 'w') as f:
+    json.dump(transcribed, f, indent=4)

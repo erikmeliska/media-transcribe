@@ -15,6 +15,13 @@ api_url = os.environ.get("API_URL")
 # Disable SSL warnings
 urllib3.disable_warnings(InsecureRequestWarning)
 
+def remove_keys_from_segments(segments):
+    keys_to_remove = ["tokens", "seek", "temperature", "avg_logprob", "compression_ratio", "no_speech_prob"]
+    for segment in segments:
+        for key in keys_to_remove:
+            segment.pop(key, None)
+
+
 # 1. downloads file, saves to audio folder
 def download_file(url):
     # Split the URL by slashes and use only the parts after the domain
@@ -51,20 +58,26 @@ def transcribe(file_name, model):
         )
     return transcribed
 
-# 3. save to text file
 def save_text(transcribed, file_name, model):
     text_file_name = file_name.split('.')[0] + '.txt'
-    with open(os.path.join('./text' , model + '_' + text_file_name), 'w') as f:
+    with open(os.path.join('./text', model + '_' + text_file_name), 'w') as f:
         if isinstance(transcribed, dict):
+            remove_keys_from_segments(transcribed["segments"])
+
             json.dump(transcribed, f, indent=4)
         else:
             f.write(transcribed)
     return text_file_name
+
     
 # 4. upload to server (callback to API)
 def upload_text(transcribed, model, process_time, url):
+    # Remove tokens before saving
+    remove_keys_from_segments(transcribed["segments"])
+        
     res = requests.post(api_url, json={
         "text": transcribed['text'],
+        "segments": transcribed['segments'],
         "language": transcribed['language'],
         "model": model,
         "process_time": process_time,
