@@ -1,7 +1,5 @@
-import time
 import Quartz  # PyObjC dependency
 import psutil
-import os
 
 MINIMUM_IDLE_TIME = 0.1  # minutes
 MIN_IDLE_PERCENTAGE = 60  # percentage

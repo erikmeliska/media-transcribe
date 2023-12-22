@@ -7,6 +7,8 @@ from urllib3.exceptions import InsecureRequestWarning
 import whisper
 import json
 from dotenv import load_dotenv
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 load_dotenv() 
 api_key = os.environ.get("API_KEY")
@@ -23,7 +25,17 @@ def remove_keys_from_segments(segments):
 
 
 # 1. downloads file, saves to audio folder
-def download_file(url):
+def download_file(url, retries=3, backoff_factor=0.3):
+    # Configure retry strategy
+    retry_strategy = Retry(
+        total=retries,
+        read=retries,
+        connect=retries,
+        backoff_factor=backoff_factor,
+        status_forcelist=[429, 500, 502, 503, 504],
+    )
+    adapter = HTTPAdapter(max_retries=retry_strategy)
+
     # Split the URL by slashes and use only the parts after the domain
     parts = url.split('/')[3:]
     # Rejoin the remaining parts using underscores
@@ -34,12 +46,21 @@ def download_file(url):
     if os.path.exists(local_filepath):
         print(f"The file '{local_filename}' already exists. Skipping download.")
         return local_filename
-    
-    with requests.get(url, stream=True, verify=False) as r:
-        r.raise_for_status()
-        with open(local_filepath, 'wb') as f:
-            for chunk in r.iter_content(chunk_size=8192):
-                f.write(chunk)
+
+    with requests.Session() as session:
+        session.mount('http://', adapter)
+        session.mount('https://', adapter)
+
+        try:
+            with session.get(url, stream=True, verify=False) as r:
+                r.raise_for_status()
+                with open(local_filepath, 'wb') as f:
+                    for chunk in r.iter_content(chunk_size=8192):
+                        f.write(chunk)
+        except requests.exceptions.RequestException as e:
+            print(f"An error occurred: {e}")
+            return None
+
     return local_filename
 
 # 2. transcribe
